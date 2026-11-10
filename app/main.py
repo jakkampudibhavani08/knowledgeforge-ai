@@ -34,7 +34,7 @@ async def upload_doc(file:UploadFile=File(...)):
             detail="File type not supported. Only Pdf and txt allowed."
         )
 
-    content=await file.read()
+    content=await file.read(max_file_size+1)
     if len(content)==0:
         raise HTTPException(
             status_code=400,

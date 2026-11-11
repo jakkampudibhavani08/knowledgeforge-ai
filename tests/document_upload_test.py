@@ -1,33 +1,78 @@
-from fastapi.testclient import TestClient 
-from app.main import app 
 
-client=TestClient(app)
+def test_valid_doc_upload(client, tmp_path):
+    content = b"KnowledgeForge AI test document"
 
-def test_valid_doc_upload():
-    response=client.post("/documents/upload",
-                         files={"file":("sample.txt",b"KnowledgeForge AI test document","text/plain")})
-    assert response.status_code==201 
-    assert "file_id" in response.json() 
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "sample.txt",
+                content,
+                "text/plain"
+            )
+        }
+    )
 
-def test_unsupported_file_type():
-    response=client.post("/documents/upload",
-                             files={"file":("sample.doc",b"KnowledgeForge AI test document","text/plain")})
-    assert response.status_code==415 
+    assert response.status_code == 201
 
-def test_doc_size():
-    oversized_len=b"A"*(10*1024*1024+1)
-    response=client.post("/documents/upload",
-                             files={"file":("sample.txt",oversized_len,"text/plain")})
-    assert response.status_code==413
+    data = response.json()
+    assert "file_id" in data
 
-def test_empty_file():
-    response=client.post("/documents/upload",
-                                 files={"file":("sample.txt",b"","text/plain")})
+    # Verify file was saved in temporary folder
+    saved_file = tmp_path / data["new_filename"]
 
-    assert response.status_code==400 
+    assert saved_file.exists()
+    assert saved_file.read_bytes() == content
 
 
-def test_fake_pdf_upload():
+def test_unsupported_file_type(client):
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "sample.doc",
+                b"KnowledgeForge AI test document",
+                "text/plain"
+            )
+        }
+    )
+
+    assert response.status_code == 415
+
+
+def test_doc_size(client):
+    oversized_content = b"A" * (10 * 1024 * 1024 + 1)
+
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "sample.txt",
+                oversized_content,
+                "text/plain"
+            )
+        }
+    )
+
+    assert response.status_code == 413
+
+
+def test_empty_file(client):
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "sample.txt",
+                b"",
+                "text/plain"
+            )
+        }
+    )
+
+    assert response.status_code == 400
+
+
+def test_fake_pdf_upload(client):
     response = client.post(
         "/documents/upload",
         files={
@@ -42,7 +87,7 @@ def test_fake_pdf_upload():
     assert response.status_code == 400
 
 
-def test_invalid_txt_upload():
+def test_invalid_txt_upload(client):
     response = client.post(
         "/documents/upload",
         files={
@@ -55,9 +100,3 @@ def test_invalid_txt_upload():
     )
 
     assert response.status_code == 400
-
-
-
-
-
-

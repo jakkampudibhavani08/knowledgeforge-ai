@@ -6,8 +6,8 @@ import fitz
 
 app=FastAPI(title="KnowledgeForge AI")
 
-upload_dir = Path("uploads")
-upload_dir.mkdir(parents=True, exist_ok=True)
+app.state.upload_dir = Path("uploads")
+app.state.upload_dir.mkdir(parents=True, exist_ok=True)
 
 
 def validate_file_content(content: bytes, extension: str):
@@ -91,7 +91,7 @@ async def upload_doc(file:UploadFile=File(...)):
     validate_file_content(content, extensions)
     file_id=str(uuid.uuid4())
     new_filename=f"{file_id}{extensions}"
-    file_path=upload_dir/new_filename
+    file_path = app.state.upload_dir / new_filename
     file_path.write_bytes(content)
 
     return{

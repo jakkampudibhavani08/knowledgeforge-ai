@@ -27,6 +27,37 @@ def test_empty_file():
     assert response.status_code==400 
 
 
+def test_fake_pdf_upload():
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "fake.pdf",
+                b"Hello, I am actually a text file!",
+                "application/pdf"
+            )
+        }
+    )
+
+    assert response.status_code == 400
+
+
+def test_invalid_txt_upload():
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "invalid.txt",
+                b"\xff\xfe\x00\x80",
+                "text/plain"
+            )
+        }
+    )
+
+    assert response.status_code == 400
+
+
+
 
 
 

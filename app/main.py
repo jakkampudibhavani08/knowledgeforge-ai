@@ -2,11 +2,54 @@ from fastapi import FastAPI, HTTPException, File, UploadFile
 from pathlib import Path 
 import uuid 
 import os 
+import fitz
 
 app=FastAPI(title="KnowledgeForge AI")
 
 upload_dir = Path("uploads")
 upload_dir.mkdir(parents=True, exist_ok=True)
+
+
+def validate_file_content(content: bytes, extension: str):
+
+    if extension == ".pdf":
+
+        if not content.startswith(b"%PDF-"):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid PDF file content"
+            )
+
+        try:
+            with fitz.open(stream=content, filetype="pdf") as doc:
+                if doc.page_count == 0:
+                    raise ValueError("PDF has no pages")
+
+                # Check that each page can be accessed
+                for page in doc:
+                    page.get_text()
+
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail="PDF file is corrupted or invalid"
+            )
+
+    elif extension == ".txt":
+
+        try:
+            text = content.decode("utf-8")
+
+            # Reject obvious binary content
+            if "\x00" in text:
+                raise ValueError("Binary content detected")
+
+        except (UnicodeDecodeError, ValueError):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid TXT file content"
+            )
+
 
 
 
@@ -45,7 +88,7 @@ async def upload_doc(file:UploadFile=File(...)):
                 status_code=413,
                 detail="Maximum File size is 5GB"
             )
-
+    validate_file_content(content, extensions)
     file_id=str(uuid.uuid4())
     new_filename=f"{file_id}{extensions}"
     file_path=upload_dir/new_filename

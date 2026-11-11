@@ -3,6 +3,7 @@ from pathlib import Path
 import uuid 
 import os 
 import fitz
+from app.schemas import DocumentUploadResponse
 
 app=FastAPI(title="KnowledgeForge AI")
 
@@ -58,7 +59,7 @@ def health_check():
     return{"status":"Healthy"}
 
 
-@app.post("/documents/upload", status_code=201)
+@app.post("/documents/upload", status_code=201, response_model=DocumentUploadResponse)
 async def upload_doc(file:UploadFile=File(...)):
     max_file_size=10*1024*1024
     file_extensions={".pdf",".txt"}
@@ -101,7 +102,7 @@ async def upload_doc(file:UploadFile=File(...)):
         "new_filename": new_filename,
         "size":len(content),
         "file_path":str(file_path),
-        "format type": extensions
+        "format_type": extensions
     }
 
 

@@ -169,3 +169,24 @@ def test_duplicate_filenames(client, tmp_path):
 
     assert file1.read_bytes() == content
     assert file2.read_bytes() == content
+
+def test_upload_response_schema(client):
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "sample.txt",
+                b"KnowledgeForge AI test",
+                "text/plain"
+            )
+        }
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert isinstance(data["file_id"], str)
+    assert isinstance(data["size"], int)
+    assert data["size"] > 0
+    assert data["format_type"] == ".txt"

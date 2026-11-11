@@ -60,7 +60,7 @@ def health_check():
 
 @app.post("/documents/upload", status_code=201)
 async def upload_doc(file:UploadFile=File(...)):
-    max_file_size=10*1024*1024 
+    max_file_size=10*1024*1024*1024
     file_extensions={".pdf",".txt"}
 
     if not file.filename:
@@ -86,7 +86,7 @@ async def upload_doc(file:UploadFile=File(...)):
     if len(content)>max_file_size:
             raise HTTPException(
                 status_code=413,
-                detail="Maximum File size is 5GB"
+                detail="Maximum File size is 10GB"
             )
     validate_file_content(content, extensions)
     file_id=str(uuid.uuid4())

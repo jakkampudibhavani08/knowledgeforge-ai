@@ -1,7 +1,6 @@
-
+import fitz
 def test_valid_doc_upload(client, tmp_path):
     content = b"KnowledgeForge AI test document"
-
     response = client.post(
         "/documents/upload",
         files={
@@ -14,13 +13,10 @@ def test_valid_doc_upload(client, tmp_path):
     )
 
     assert response.status_code == 201
-
     data = response.json()
     assert "file_id" in data
-
     # Verify file was saved in temporary folder
     saved_file = tmp_path / data["new_filename"]
-
     assert saved_file.exists()
     assert saved_file.read_bytes() == content
 
@@ -36,13 +32,11 @@ def test_unsupported_file_type(client):
             )
         }
     )
-
     assert response.status_code == 415
 
 
 def test_doc_size(client):
     oversized_content = b"A" * (10 * 1024 * 1024 + 1)
-
     response = client.post(
         "/documents/upload",
         files={
@@ -53,7 +47,6 @@ def test_doc_size(client):
             )
         }
     )
-
     assert response.status_code == 413
 
 
@@ -68,7 +61,6 @@ def test_empty_file(client):
             )
         }
     )
-
     assert response.status_code == 400
 
 
@@ -83,7 +75,6 @@ def test_fake_pdf_upload(client):
             )
         }
     )
-
     assert response.status_code == 400
 
 
@@ -98,19 +89,15 @@ def test_invalid_txt_upload(client):
             )
         }
     )
-
     assert response.status_code == 400
 
 
 def test_valid_pdf_upload(client, tmp_path):
-    import fitz
-
-    # Create a real PDF document
     pdf = fitz.open()
-    pdf.new_page()
+    page = pdf.new_page()
+    page.insert_text((72, 72), "Hello KnowledgeForge AI")
     content = pdf.tobytes()
     pdf.close()
-
     # Upload the PDF
     response = client.post(
         "/documents/upload",
@@ -124,20 +111,17 @@ def test_valid_pdf_upload(client, tmp_path):
     )
 
     # Verify successful upload
+    print("API Error:", response.json())
     assert response.status_code == 201
-
     data = response.json()
-
     # Verify the PDF was saved in the temporary folder
     saved_file = tmp_path / data["new_filename"]
-
     assert saved_file.exists()
     assert saved_file.read_bytes() == content
 
 
 def test_duplicate_filenames(client, tmp_path):
     content = b"KnowledgeForge AI test"
-
     files = {
         "file": (
             "sample.txt",
@@ -145,7 +129,6 @@ def test_duplicate_filenames(client, tmp_path):
             "text/plain"
         )
     }
-
     # Upload the same filename twice
     response1 = client.post("/documents/upload", files=files)
     response2 = client.post("/documents/upload", files=files)
@@ -190,3 +173,34 @@ def test_upload_response_schema(client):
     assert isinstance(data["size"], int)
     assert data["size"] > 0
     assert data["format_type"] == ".txt"
+
+
+def test_pdf_without_text(client, tmp_path):
+    # Create a valid PDF with a blank page
+    pdf = fitz.open()
+    pdf.new_page()
+    content = pdf.tobytes()
+    pdf.close()
+
+    # Upload the PDF
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "blank.pdf",
+                content,
+                "application/pdf"
+            )
+        }
+    )
+
+    # Extraction should fail
+    assert response.status_code == 422
+
+    # Original uploaded PDF should still exist
+    uploaded_files = list(tmp_path.glob("*.pdf"))
+    assert len(uploaded_files) == 1
+
+    # No extracted JSON file should be created
+    extracted_dir = tmp_path / "extracted"
+    assert list(extracted_dir.glob("*.json")) == []

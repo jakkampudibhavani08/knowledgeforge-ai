@@ -3,13 +3,15 @@ from pathlib import Path
 import uuid 
 import os 
 import fitz
-from app.schemas import DocumentUploadResponse
+from app.schemas import DocumentUploadResponse,DocumentExtractionResponse
+from app.services.extraction import text_extraction
+from app.services.storage import save_extraction_result
 
 app=FastAPI(title="KnowledgeForge AI")
 
 app.state.upload_dir = Path("uploads")
 app.state.upload_dir.mkdir(parents=True, exist_ok=True)
-
+app.state.extracted_dir = Path("extracted")
 
 def validate_file_content(content: bytes, extension: str):
 
@@ -94,6 +96,28 @@ async def upload_doc(file:UploadFile=File(...)):
     new_filename=f"{file_id}{extensions}"
     file_path = app.state.upload_dir / new_filename
     file_path.write_bytes(content)
+    try:
+        extracted_data = text_extraction(file_path)
+
+    except ValueError as error:
+        raise HTTPException(
+        status_code=422,
+        detail=str(error)
+    )
+    try:
+        extraction_result = DocumentExtractionResponse(
+        document_id=file_id,
+        filename=file.filename,
+        pages=extracted_data)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(error)
+        )
+
+    json_file_path = save_extraction_result(
+    extraction_result,
+    app.state.extracted_dir)
 
     return{
         "message": "File Successfully uploaded",
